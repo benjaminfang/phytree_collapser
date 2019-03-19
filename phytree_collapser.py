@@ -14,10 +14,10 @@ def offer_timemarker():
 def get_args():
     args=argparse.ArgumentParser(description='this is a utility for collapsing phylogenic tree.',epilog='any problem please contect benjaminfang.ol@outlook.com, or visite https://github.com/benjaminfang.')
     args.add_argument('-tree_file',type=str,required=True,help='the file name of newik tree.')
-    args.add_argument('-collapse_proportion',type=float,required=True,help='proportion of oritation "root node to leaf",node out this proportion will be collapsed.')
-    args.add_argument('-dist_type',type=str,default='el',choices=['el','nl'],help='distance type. el for edge distance, nl for node distance.')
-    args.add_argument('-list_type',type=str,default='e',choices=['e','i'],help='if "e" all parent of leaf within leaves list will except collapse, and "i" do reverse.')
+    args.add_argument('-collapse_value',type=float,required=True,help='proportion of oritation "root node to leaf",node out this proportion will be collapsed.')
+    args.add_argument('-dist_type',type=str,default='el',choices=['el','nl','elf','nlf'],help='distance type. el for edge distance, nl for node distance.')
     args.add_argument('-list_file',type=str,default='None',help='leaf node list file name.')
+    args.add_argument('-list_type',type=str,default='e',choices=['e','i'],help='if "e" all parent of leaf within leaves list will except collapse, and "i" do reverse.')
     args.add_argument('-collapsed_node_name',type=str,default='CLPS',help='node name prefix of collapsed nodes.')
     args.add_argument('-o_tree_fname',type=str,default='collapsed_tree_'+offer_timemarker()+'.nwk',help='tree file name of collapsed.')
     args.add_argument('-o_tree_plot_fname',type=str,default='collapsed_tree_plot_'+offer_timemarker()+'.pdf',help='a plot of collapsed tree.')
@@ -25,7 +25,7 @@ def get_args():
     args=args.parse_args()
     tree_file=args.tree_file
     dist_type=args.dist_type
-    collapse_proportion=args.collapse_proportion
+    collapse_value=args.collapse_value
     list_type=args.list_type
     list_file=args.list_file
     collapsed_node_name=args.collapsed_node_name
@@ -33,7 +33,7 @@ def get_args():
     o_tree_plot_fname=args.o_tree_plot_fname
     o_collapsed_node_fname=args.o_collapsed_node_fname
 
-    return tree_file,dist_type,collapse_proportion,list_type,list_file,collapsed_node_name,o_tree_fname,o_tree_plot_fname,o_collapsed_node_fname
+    return tree_file,dist_type,collapse_value,list_type,list_file,collapsed_node_name,o_tree_fname,o_tree_plot_fname,o_collapsed_node_fname
 
 def get_node_list(tree,list_file):
     leaves_list=[]
@@ -47,7 +47,7 @@ def get_node_list(tree,list_file):
 
     return leaves_list
 
-def collapser(tree,dist_type,collapse_proportion,list_type,leaves_list,collapsed_node_name='CLPS'):
+def collapser(tree,dist_type,collapse_value,list_type,leaves_list,collapsed_node_name='CLPS'):
     def get_longest_dist(tree):
         el_l=[]
         nl_l=[]
@@ -58,10 +58,10 @@ def collapser(tree,dist_type,collapse_proportion,list_type,leaves_list,collapsed
             nl_l.append([leaf,nl])
         el_l.sort(key=lambda x:x[1],reverse=True)
         nl_l.sort(key=lambda x:x[1],reverse=True)
-#        print(el_l[0:2])
-#        print(nl_l[0:2])
         el_max=el_l[0][1]
         nl_max=nl_l[0][1]
+        print('el_max:',el_max)
+        print('nl_max:',nl_max)
         return el_max,nl_max
 
     def get_candidate_node_by_el(root_node, node, el_cutoff):
@@ -80,7 +80,7 @@ def collapser(tree,dist_type,collapse_proportion,list_type,leaves_list,collapsed
 
     def collapse_node(candidate_nodes,list_type,leaves_list,collapsed_node_name='CLPS'):
         collapsed_node={}
-        print(leaves_list)
+        #print(leaves_list)
         node_need_collapse=[]
         if list_type=='e':
             for node in candidate_nodes:
@@ -121,13 +121,22 @@ def collapser(tree,dist_type,collapse_proportion,list_type,leaves_list,collapsed
     el_max,nl_max=get_longest_dist(tree)
     all_candidate_nodes=[]
     if dist_type=='el':
-        el_cutoff=el_max*collapse_proportion
-        get_candidate_node_by_el(tree,tree,el_cutoff)
+        cutoff=collapse_value
+    elif dist_type=='elf':
+        cutoff=el_max*collapse_value
     elif dist_type=='nl':
-        nl_cutoff=nl_max*collapse_proportion
-        get_candidate_node_by_nl(tree,tree,nl_cutoff)
+        cutoff=collapse_value
+    elif dist_type=='nlf':
+        cutoff=nl_max*collapse_value
     else:
-        print('error...')
+        print('error1...')
+
+    if dist_type=='el' or dist_type=='elf':
+        get_candidate_node_by_el(tree,tree,cutoff)
+    elif dist_type=='nl' or dist_type=='nlf':
+        get_candidate_node_by_nl(tree,tree,cutoff)
+    else:
+        print('error2...')
 
     collapsed_node=collapse_node(all_candidate_nodes,list_type,leaves_list,collapsed_node_name)
 

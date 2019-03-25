@@ -20,7 +20,7 @@ def get_args():
     args.add_argument('-list_file',type=str,default='None',help='leaf node list file name.')
     args.add_argument('-list_type',type=str,default='e',choices=['e','i'],help='if "e" all parent of leaf within leaves list will except collapse, and "i" do reverse.')
     args.add_argument('-collapsed_node_name',type=str,default='CLPS',help='node name prefix of collapsed nodes.')
-    args.add_argument('-orientation', type=str, default='lr', choices=['lr','rl','c','c2'], help='orientaion when alg greed find node.')
+    args.add_argument('-orientation', type=str, default='lr', choices=['lr','rl'], help='orientaion when alg greed find node. used when algrisme "greed" chosed.')
     args.add_argument('-o_tree_fname',type=str,default='collapsed_tree_'+offer_timemarker()+'.nwk',help='tree file name of collapsed.')
     args.add_argument('-o_tree_plot_fname',type=str,default='collapsed_tree_plot_'+offer_timemarker()+'.pdf',help='a plot of collapsed tree.')
     args.add_argument('-o_collapsed_node_fname',type=str,default='collapsed_node_'+offer_timemarker()+'.ndi',help='file contain node information which was collapsed.')
@@ -32,11 +32,12 @@ def get_args():
     list_type=args.list_type
     list_file=args.list_file
     collapsed_node_name=args.collapsed_node_name
+    orientation=args.orientation
     o_tree_fname=args.o_tree_fname
     o_tree_plot_fname=args.o_tree_plot_fname
     o_collapsed_node_fname=args.o_collapsed_node_fname
 
-    return alg,tree_file,dist_type,collapse_value,list_type,list_file,collapsed_node_name,o_tree_fname,o_tree_plot_fname,o_collapsed_node_fname
+    return alg,tree_file,dist_type,collapse_value,list_type,list_file,collapsed_node_name,orientation,o_tree_fname,o_tree_plot_fname,o_collapsed_node_fname
 
 def get_except_leaf_node(tree,list_file,list_type):
     # get leaf node which should be keep when collapse performing.
@@ -164,15 +165,15 @@ def collapser_rl_go(tree,dist_type,collapse_value,list_type,list_file,collapsed_
 
 def collapse_lr(tree, dist_type, collapse_position, leaves_list, collapsed_node_name='CLPS'):
     def get_candidate_node_by_el(leaf, node, el_cutoff):
-        if node.get_distance(leaf)>=el_cutoff:
+        if node and  node.get_distance(leaf)>=el_cutoff:
             all_candidate_nodes.add(node)
-        else:
+        elif node:
             get_candidate_node_by_el(leaf, node.up, el_cutoff)
 
     def get_candidate_node_by_nl(leaf, node, nl_cutoff):
-        if node.get_distance(leaf, topology_only=True)>=nl_cutoff:
+        if node and node.get_distance(leaf, topology_only=True)>=nl_cutoff:
             all_candidate_nodes.add(node)
-        else:
+        elif node:
             get_candidate_node_by_nl(leaf, node.up, nl_cutoff)
 
     clps_count_used=0
@@ -205,17 +206,18 @@ def collapse_greed(tree, keeped_nodes, leaves_list):
                     sister.detach()
             node=node.up
 
-def get_keeped_node_lr(tree, collapse_value, dist_type, leaves_list):
+def collapse_greed_lr(tree, collapse_value, dist_type, leaves_list):
     def get_candidate_node_by_el(leaf, node, el_cutoff):
-        if node.get_distance(leaf)>=el_cutoff:
+        if node and node.get_distance(leaf)>=el_cutoff:
             all_candidate_nodes.add(node)
-        else:
+        elif node:
             get_candidate_node_by_el(leaf, node.up, el_cutoff)
 
     def get_candidate_node_by_nl(leaf, node, nl_cutoff):
-        if node.get_distance(leaf, topology_only=True)>=nl_cutoff:
+        #print(node)
+        if node and node.get_distance(leaf, topology_only=True)>=nl_cutoff:
             all_candidate_nodes.add(node)
-        else:
+        elif node:
             get_candidate_node_by_nl(leaf, node.up, nl_cutoff)
 
     all_candidate_nodes=set()
@@ -229,19 +231,19 @@ def get_keeped_node_lr(tree, collapse_value, dist_type, leaves_list):
     all_keeped_node=all_candidate_nodes
     collapse_greed(tree, all_keeped_node, leaves_list)
 
-def get_keeped_node_rl(tree, collapse_value, dist_type, leaves_list):
+def collapse_greed_rl(tree, collapse_value, dist_type, leaves_list):
     def get_candidate_node_by_el(root_node, node, el_cutoff):
         for child in node.children:
-            if root_node.get_distance(child) >= el_cutoff:
+            if node and root_node.get_distance(child) >= el_cutoff:
                 all_candidate_nodes.append(child)
-            else:
+            elif node:
                 get_candidate_node_by_el(root_node,child,el_cutoff)
 
     def get_candidate_node_by_nl(root_node, node, nl_cutoff):
         for child in node.children:
-            if root_node.get_distance(child, topology_only=True) >= nl_cutoff:
+            if node and root_node.get_distance(child, topology_only=True) >= nl_cutoff:
                 all_candidate_nodes.append(child)
-            else:
+            elif node:
                 get_candidate_node_by_nl(root_node, child, nl_cutoff)
 
     cutoff=collapse_value
@@ -256,12 +258,19 @@ def get_keeped_node_rl(tree, collapse_value, dist_type, leaves_list):
             keeped_nodes.append(node)
     collapse_greed(tree, keeped_nodes, leaves_list)
 
-def collapse_greed_go():
-    pass
-
+def collapse_greed_go(tree, dist_type, collapse_value, list_type, list_file, orientation):
+    if len(collapse_value)>1:
+        raise Exception('too many collapse value.')
+    else:
+        collapse_position=get_collapse_position(tree, collapse_value, dist_type)[0]
+    leaves_list=get_except_leaf_node(tree, list_file, list_type)
+    if orientation=='lr':
+        collapse_greed_lr(tree, collapse_position, dist_type, leaves_list)
+    elif orientation=='rl':
+        collapse_greed_rl(tree, collapse_position, dist_type, leaves_list)
 
 def main():
-    alg,tree_file,dist_type,collapse_value,list_type,list_file,collapsed_node_name,o_tree_fname,o_tree_plot_fname,o_collapsed_node_fname=get_args()
+    alg,tree_file,dist_type,collapse_value,list_type,list_file,collapsed_node_name,orientation,o_tree_fname,o_tree_plot_fname,o_collapsed_node_fname=get_args()
     tree=ete3.Tree(tree_file)
     #print(tree)
     if alg=='r2l_hier':
@@ -277,8 +286,9 @@ def main():
             print(node)
             print(collapsed_node[node].write())
     elif alg=='greed':
-        pass
-
+        collapse_greed_go(tree, dist_type, collapse_value, list_type, list_file, orientation)
+        print(tree)
+        #tree.render('hhhhh.pdf')
 
 
 if __name__ == '__main__':

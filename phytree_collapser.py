@@ -8,7 +8,6 @@ def offer_timemarker():
     time_now=''.join([format(time_now.tm_year,'04'),format(time_now.tm_mon,'02'),
                       format(time_now.tm_mday,'02'),format(time_now.tm_hour,'02'),
                       format(time_now.tm_min,'02'), format(time_now.tm_sec,'02')])
-
     return time_now
 
 def get_args():
@@ -129,7 +128,6 @@ def collapse_node(candidate_nodes,leaves_list,collapsed_node_name='CLPS',clps_co
     return collapsed_node,i
 
 def collapser_rl(tree,dist_type,collapse_position,leaves_list,collapsed_node_name='CLPS'):
-
     def get_candidate_node_by_el(root_node, node, el_cutoff):
         for child in node.children:
             if root_node.get_distance(child) >= el_cutoff:

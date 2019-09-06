@@ -271,15 +271,16 @@ def main():
     alg,tree_file,dist_type,collapse_value,list_type,list_file,collapsed_node_name,orientation,o_tree_fname,o_tree_plot_fname,o_collapsed_node_fname=get_args()
     tree=ete3.Tree(tree_file)
     #print(tree)
+    f_out=open('tree_collapsed_by_hier.nwk','w')
     if alg=='r2l_hier':
         collapsed_node=collapser_rl_go(tree,dist_type,collapse_value,list_type,list_file,collapsed_node_name)
-        print(tree)
+        print(tree.write(),file=f_out)
         for node in collapsed_node:
             print(node)
             print(collapsed_node[node].write())
     elif alg=='l2r_hier':
         collapsed_node=collapse_lr_go(tree, dist_type, collapse_value, list_type, list_file, collapsed_node_name)
-        print(tree)
+        print(tree.write(),file=f_out)
         for node in collapsed_node:
             print(node)
             print(collapsed_node[node].write())

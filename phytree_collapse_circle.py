@@ -173,6 +173,5 @@ def main():
     collapse_greed(tree, keeped_nodes, item_leaves)
     print(tree)
 
-
 if __name__ == '__main__':
     main()
